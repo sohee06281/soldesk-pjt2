@@ -2,7 +2,7 @@ resource "aws_security_group" "ec2_sg" {
   name   = "ec2-sg"
   vpc_id = aws_vpc.main.id
 
-  # ALB에서만 들어오는 80 포트 허용
+  # ALB에서만 들어오는 80 포트 허용  test
   ingress {
     from_port   = 80
     to_port     = 80
