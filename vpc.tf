@@ -1,103 +1,140 @@
+# ==================== VPC ====================
 resource "aws_vpc" "main" {
-  cidr_block = "10.0.0.0/16"
+  cidr_block           = var.vpc_cidr
   enable_dns_hostnames = true
   enable_dns_support   = true
-  tags = { Name = "main-vpc" }
+
+  tags = {
+    Name = "${var.project_name}-vpc-${var.environment}"
+  }
 }
 
-resource "aws_internet_gateway" "igw" {
+# ==================== Internet Gateway ====================
+resource "aws_internet_gateway" "main" {
   vpc_id = aws_vpc.main.id
-  tags = { Name = "main-igw" }
+
+  tags = {
+    Name = "${var.project_name}-igw-${var.environment}"
+  }
 }
 
-# Public Subnet A
-resource "aws_subnet" "public_a" {
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = "10.0.1.0/24"
-  availability_zone = "${var.region}a"
+# ==================== Public Subnets ====================
+resource "aws_subnet" "public" {
+  count = 2
+
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = cidrsubnet(var.vpc_cidr, 8, count.index)
+  availability_zone       = var.availability_zones[count.index]
   map_public_ip_on_launch = true
 
   tags = {
-    Name = "public-subnet-a"
+    Name = "${var.project_name}-public-subnet-${count.index + 1}-${var.environment}"
+    Type = "Public"
   }
 }
 
-# Public Subnet B
-resource "aws_subnet" "public_b" {
+# ==================== Private Subnets (for RDS) ====================
+resource "aws_subnet" "private" {
+  count = 2
+
   vpc_id            = aws_vpc.main.id
-  cidr_block        = "10.0.2.0/24"
-  availability_zone = "${var.region}b"
-  map_public_ip_on_launch = true
+  cidr_block        = cidrsubnet(var.vpc_cidr, 8, count.index + 10)
+  availability_zone = var.availability_zones[count.index]
 
-  tags = { Name = "public-subnet-b" }
+  tags = {
+    Name = "${var.project_name}-private-subnet-${count.index + 1}-${var.environment}"
+    Type = "Private"
+  }
 }
 
-# Private Subnet A
-resource "aws_subnet" "private_a" {
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = "10.0.10.0/24"
-  availability_zone = "${var.region}a"
-
-  tags = { Name = "private-subnet-a" }
-}
-
-# Private Subnet B
-resource "aws_subnet" "private_b" {
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = "10.0.11.0/24"
-  availability_zone = "${var.region}b"
-
-  tags = { Name = "private-subnet-b" }
-}
-
-# NAT Gateway + EIP (Public Subnet A → Private 통신)
-resource "aws_eip" "nat_eip" {
-  vpc = true
-}
-
-resource "aws_nat_gateway" "nat" {
-  allocation_id = aws_eip.nat_eip.id
-  subnet_id     = aws_subnet.public_a.id
-  tags = { Name = "main-nat" }
-}
-
-# Public Route Table
-resource "aws_route_table" "public_rt" {
+# ==================== Route Table (Public) ====================
+resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
 
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.igw.id
+    gateway_id = aws_internet_gateway.main.id
+  }
+
+  tags = {
+    Name = "${var.project_name}-public-rt-${var.environment}"
   }
 }
 
-# Private Route Table
-resource "aws_route_table" "private_rt" {
-  vpc_id = aws_vpc.main.id
+# Route Table Association
+resource "aws_route_table_association" "public" {
+  count = 2
 
-  route {
-    cidr_block = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.nat.id
+  subnet_id      = aws_subnet.public[count.index].id
+  route_table_id = aws_route_table.public.id
+}
+
+# ==================== Security Group - Lambda ====================
+resource "aws_security_group" "lambda" {
+  name        = "${var.project_name}-lambda-sg-${var.environment}"
+  description = "Security group for Lambda functions"
+  vpc_id      = aws_vpc.main.id
+
+  # Lambda는 아웃바운드만 필요 (RDS, Secrets Manager, S3 접근)
+  egress {
+    description = "Allow all outbound traffic"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "${var.project_name}-lambda-sg-${var.environment}"
   }
 }
 
-# Associations
-resource "aws_route_table_association" "public_a_assoc" {
-  subnet_id      = aws_subnet.public_a.id
-  route_table_id = aws_route_table.public_rt.id
+# ==================== Security Group - RDS ====================
+resource "aws_security_group" "rds" {
+  name        = "${var.project_name}-rds-sg-${var.environment}"
+  description = "Security group for RDS PostgreSQL"
+  vpc_id      = aws_vpc.main.id
+
+  # Lambda에서 PostgreSQL 접근 허용
+  ingress {
+    description     = "PostgreSQL from Lambda"
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [aws_security_group.lambda.id]
+  }
+
+  # 개발 편의를 위한 외부 접근 (프로덕션에선 제거)
+  ingress {
+    description = "PostgreSQL from anywhere (DEV ONLY)"
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    description = "Allow all outbound traffic"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "${var.project_name}-rds-sg-${var.environment}"
+  }
 }
 
-resource "aws_route_table_association" "public_b_assoc" {
-  subnet_id      = aws_subnet.public_b.id
-  route_table_id = aws_route_table.public_rt.id
-}
+# ==================== VPC Endpoints (선택사항 - 비용 절감) ====================
+# S3 VPC Endpoint - Lambda가 S3에 접근할 때 인터넷 거치지 않음
+resource "aws_vpc_endpoint" "s3" {
+  vpc_id            = aws_vpc.main.id
+  service_name      = "com.amazonaws.${var.aws_region}.s3"
+  vpc_endpoint_type = "Gateway"
+  route_table_ids   = [aws_route_table.public.id]
 
-resource "aws_route_table_association" "private_a_assoc" {
-  subnet_id      = aws_subnet.private_a.id
-  route_table_id = aws_route_table.private_rt.id
-}
-
-resource "aws_route_table_association" "private_b_assoc" {
-  subnet_id      = aws_subnet.private_b.id
-  route_table_id = aws_route_table.private_rt.id
+  tags = {
+    Name = "${var.project_name}-s3-endpoint-${var.environment}"
+  }
 }
