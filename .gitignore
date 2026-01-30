@@ -1,0 +1,14 @@
+.terraform/
+*.tfstate
+<<<<<<< HEAD
+*.tfstate.backup
+terraform.tfvars
+
+.env
+__pycache__/
+*.log
+=======
+*.tfstate.*
+*.tfvars
+.terraform.lock.hcl
+>>>>>>> 098bf4fb2a3fcc45cc2fbb8e1578dd367ddf7322
