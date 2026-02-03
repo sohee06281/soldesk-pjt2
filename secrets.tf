@@ -1,5 +1,5 @@
 resource "aws_secretsmanager_secret" "db" {
-  name = "${var.project_name}-db-secret4444"
+  name = "${var.project_name}-db-secret565656"
 }
 
 resource "aws_secretsmanager_secret_version" "db" {

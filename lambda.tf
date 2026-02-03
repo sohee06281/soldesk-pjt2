@@ -45,7 +45,7 @@ resource "aws_lambda_function" "this" {
       YOUTUBE_API_KEY  = var.youtube_api_key
       GOOGLE_CLIENT_ID  = var.google_client_id
       GOOGLE_CLIENT_SECRET  = var.google_client_secret
-      GOOGLE_REFRESH_TOKEN  = var.google_refresh_token
+      REDIRECT_URI  = "https://${aws_api_gateway_rest_api.this.id}.execute-api.${var.aws_region}.amazonaws.com/${var.env}/auth/google/callback"
       S3_BUCKET_RAW = aws_s3_bucket.lambda.bucket
     }
   }
@@ -91,7 +91,8 @@ resource "aws_iam_role_policy" "lambda_vpc" {
         Effect = "Allow"
         Action = [
           "s3:PutObject",
-          "s3:PutObjectAcl"
+          "s3:GetObject"
+          
         ]
         Resource = "*"
       }
