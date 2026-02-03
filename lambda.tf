@@ -46,7 +46,7 @@ resource "aws_lambda_function" "this" {
       GOOGLE_CLIENT_ID  = var.google_client_id
       GOOGLE_CLIENT_SECRET  = var.google_client_secret
       GOOGLE_REFRESH_TOKEN  = var.google_refresh_token
-      S3_BUCKET_RAW = aws_s3_bucket.this.bucket
+      S3_BUCKET_RAW = aws_s3_bucket.lambda.bucket
     }
   }
 
