@@ -25,8 +25,7 @@ resource "aws_lambda_function" "this" {
 
   vpc_config {
     subnet_ids = [
-      aws_subnet.private_a.id,
-      aws_subnet.private_c.id
+      aws_subnet.private_a.id
     ]
 
     security_group_ids = [
