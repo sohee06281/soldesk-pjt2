@@ -11,14 +11,14 @@ resource "aws_iam_role" "lambda" {
   })
 }
 
-resource "aws_lambda_function" "this" {
+resource "aws_lambda_function" "lambda" {
   function_name = "${var.project_name}-lambda"
   role          = aws_iam_role.lambda.arn
   runtime       = "python3.10"
   handler       = "lambda_ingest.lambda_handler"
 
-  filename         = "lambda_ingest.py.zip"
-  source_code_hash = filebase64sha256("${var.root_path}\\lambda_ingest.py.zip")
+  filename         = "naya-lambda.zip"
+  source_code_hash = filebase64sha256("${var.root_path}\\naya-lambda.zip")
 
   timeout     = 30
   memory_size = 512
@@ -51,7 +51,8 @@ resource "aws_lambda_function" "this" {
 
   layers = [
     "arn:aws:lambda:ap-northeast-2:289050431231:layer:requests_layer:1",
-    "arn:aws:lambda:ap-northeast-2:289050431231:layer:lambda_db_pg8000:1"
+    "arn:aws:lambda:ap-northeast-2:289050431231:layer:lambda_db_pg8000:1",
+    "arn:aws:lambda:ap-northeast-2:289050431231:layer:azure-test:2"
   ]
 
 }

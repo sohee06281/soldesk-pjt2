@@ -13,6 +13,10 @@ resource "aws_subnet" "public_a" {
   cidr_block        = "10.0.1.0/24"
   availability_zone = "ap-northeast-2a"
   map_public_ip_on_launch = true
+
+  tags = {
+    Name = "${var.project_name}-public-a"
+  }
 }
 
 
@@ -21,12 +25,20 @@ resource "aws_subnet" "private_a" {
   vpc_id            = aws_vpc.this.id
   cidr_block        = "10.0.10.0/24"
   availability_zone = "ap-northeast-2a"
+
+  tags = {
+    Name = "${var.project_name}-private-a"
+  }
 }
 
 resource "aws_subnet" "private_c" {
   vpc_id            = aws_vpc.this.id
   cidr_block        = "10.0.11.0/24"
   availability_zone = "ap-northeast-2c"
+
+  tags = {
+    Name = "${var.project_name}-private-c"
+  }
 }
 
 

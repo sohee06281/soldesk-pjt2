@@ -10,7 +10,7 @@ variable "key_name" {
 }
 
 variable "root_path" {
-  default = "C:\\leesomin_wkspace\\soldesk-pjt2"
+  default = "C:\\pjt\\soldesk-pjt2"
 }
 
 variable "vpc_cidr" {
@@ -74,6 +74,7 @@ variable "google_refresh_token" {
   type        = string
   sensitive   = true
 }
+
 
 
 

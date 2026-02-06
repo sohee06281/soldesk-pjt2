@@ -10,7 +10,7 @@ resource "aws_s3_bucket" "lambda" {
 resource "aws_s3_bucket" "frontend" {
   bucket = "naya-frontend-2026"
   acl    = "private"
-
+  
   tags = {
     Name = "naya-frontend-2026"
   }
